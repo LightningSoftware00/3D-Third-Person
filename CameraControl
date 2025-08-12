@@ -1,51 +1,50 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class ThirdPersonCamera : MonoBehaviour
+public class CameraControl : MonoBehaviour
 {
-    public Transform player;  // Oyuncu referansı
-    public float mouseSensitivity = 100f; // Mouse hassasiyeti
-    public float distance = 5f; // Kameranın oyuncuya uzaklığı
-    public float smoothTime = 0.3f; // Kameranın geçiş süresi
-    private Vector3 currentVelocity = Vector3.zero; // Kameranın mevcut hızı
-    private float xRotation = 0f;
-    private float yRotation = 0f;
+    public Transform player;  // Karakterin transformu
+    public float rotationSpeed = 3f;  // Kamera dönüş hızı
+    public float cameraDistance = 5f; // Kameranın karakterden uzaklığı
+    public float cameraHeight = 2f;   // Kameranın yüksekliği
+    public float minCameraDistance = 2f; // Kamera engelleme mesafesi
+    public float maxCameraAngle = 80f; // Kamera açısı sınırı
+    public float minCameraAngle = -40f; // Kamera açısı sınırı
 
-    void Start()
+    private void Update()
     {
-        // Cursor'ı kilitle ve gizle
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        HandleCameraRotation();
+        HandleCameraPosition();
     }
 
-    void Update()
+    // Kameranın karakteri takip etme ve dönüşü
+    void HandleCameraRotation()
     {
-        HandleMouseInput();
-        MoveCamera();
+        float mouseX = Input.GetAxis("Mouse X") * rotationSpeed;
+        float mouseY = Input.GetAxis("Mouse Y") * rotationSpeed;
+
+        // Kamerayı yatayda döndür
+        transform.RotateAround(player.position, Vector3.up, mouseX);
+
+        // Kamerayı dikeyde döndür (Limitsiz açılar için)
+        float currentAngleX = transform.eulerAngles.x;
+        currentAngleX -= mouseY;
+        currentAngleX = Mathf.Clamp(currentAngleX, minCameraAngle, maxCameraAngle);
+        transform.rotation = Quaternion.Euler(currentAngleX, transform.eulerAngles.y, 0f);
     }
 
-    // Fare hareketini al ve kamerayı döndür
-    void HandleMouseInput()
+    // Kameranın pozisyonunu ayarlamak
+    void HandleCameraPosition()
     {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        Vector3 desiredPosition = player.position - transform.forward * cameraDistance + Vector3.up * cameraHeight;
 
-        // Y ekseninde döndürmeyi engelle
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+        // Raycast kullanarak kameranın engellenmesini önleyelim
+        RaycastHit hit;
+        if (Physics.Raycast(player.position, -transform.forward, out hit, cameraDistance))
+        {
+            cameraDistance = Mathf.Max(minCameraDistance, hit.distance);  // Kamera objeyi geçemez
+        }
 
-        yRotation += mouseX;
-    }
-
-    // Kamera hareketini yumuşak bir şekilde uygula
-    void MoveCamera()
-    {
-        Quaternion rotation = Quaternion.Euler(xRotation, yRotation, 0f);
-        Vector3 desiredPosition = player.position - rotation * Vector3.forward * distance;
-
-        // Kamerayı yavaşça hareket ettir
-        transform.position = Vector3.SmoothDamp(transform.position, desiredPosition, ref currentVelocity, smoothTime);
-        transform.LookAt(player);
+        // Kamerayı hareket ettir
+        transform.position = Vector3.Lerp(transform.position, desiredPosition, Time.deltaTime * 5f);
     }
 }
