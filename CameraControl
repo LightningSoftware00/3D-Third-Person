@@ -1,0 +1,51 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class ThirdPersonCamera : MonoBehaviour
+{
+    public Transform player;  // Oyuncu referansı
+    public float mouseSensitivity = 100f; // Mouse hassasiyeti
+    public float distance = 5f; // Kameranın oyuncuya uzaklığı
+    public float smoothTime = 0.3f; // Kameranın geçiş süresi
+    private Vector3 currentVelocity = Vector3.zero; // Kameranın mevcut hızı
+    private float xRotation = 0f;
+    private float yRotation = 0f;
+
+    void Start()
+    {
+        // Cursor'ı kilitle ve gizle
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
+    void Update()
+    {
+        HandleMouseInput();
+        MoveCamera();
+    }
+
+    // Fare hareketini al ve kamerayı döndür
+    void HandleMouseInput()
+    {
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+
+        // Y ekseninde döndürmeyi engelle
+        xRotation -= mouseY;
+        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+
+        yRotation += mouseX;
+    }
+
+    // Kamera hareketini yumuşak bir şekilde uygula
+    void MoveCamera()
+    {
+        Quaternion rotation = Quaternion.Euler(xRotation, yRotation, 0f);
+        Vector3 desiredPosition = player.position - rotation * Vector3.forward * distance;
+
+        // Kamerayı yavaşça hareket ettir
+        transform.position = Vector3.SmoothDamp(transform.position, desiredPosition, ref currentVelocity, smoothTime);
+        transform.LookAt(player);
+    }
+}
