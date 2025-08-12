@@ -14,7 +14,7 @@ public class PlayerMovement : MonoBehaviour
     public float speedDecayFactor = 0.5f;  // Hız azalması oranı
 
     private float currentSpeed;    // Aktif hız
-    private bool isGrounded;       // Karakterin yere temas edip etmediğini kontrol et
+    private bool isPlayerGrounded;       // Karakterin yere temas edip etmediğini kontrol et
     private bool isCrouching = false;  // Eğilme durumu
     private bool isSliding = false;    // Sürüklenme durumu
     private Rigidbody rb;          // Rigidbody referansı
@@ -22,15 +22,27 @@ public class PlayerMovement : MonoBehaviour
 
     private void Start()
     {
+        // Rigidbody ve Animator bileşenlerini alıyoruz
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
+
+        // Eğer Rigidbody ve Animator bileşenleri yoksa hata mesajı göster
+        if (rb == null)
+        {
+            Debug.LogError("Rigidbody bileşeni eksik! Lütfen Rigidbody bileşenini ekleyin.");
+        }
+
+        if (animator == null)
+        {
+            Debug.LogError("Animator bileşeni eksik! Lütfen Animator bileşenini ekleyin.");
+        }
     }
 
     private void Update()
     {
-        HandleMovement();
-        HandleJump();
-        HandleCrouch();
+        HandleMovement();  // Hareket işlemi
+        HandleJump();      // Zıplama işlemi
+        HandleCrouch();    // Eğilme işlemi
     }
 
     // Karakterin hareketini işleyen fonksiyon
@@ -43,7 +55,7 @@ public class PlayerMovement : MonoBehaviour
         // Hareket yönünü belirle
         Vector3 moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
 
-        // Yürüme ve koşma arasında geçiş yap
+        // Hareket hızını koşma (Shift) ya da yürüyüş (Varsayılan) olarak belirle
         currentSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
 
         // Eğer hareket varsa, hareketi uygula
@@ -57,17 +69,17 @@ public class PlayerMovement : MonoBehaviour
             // Karakteri hareket ettir
             Vector3 move = transform.forward * currentSpeed * Time.deltaTime;
 
-            // Eğilme durumunda daha hızlı hareket et
+            // Eğilme ve sürüklenme durumunda hareket
             if (isCrouching && isSliding)
             {
                 transform.Translate(Vector3.forward * crouchSlideSpeed * Time.deltaTime);
             }
             else
             {
-                rb.MovePosition(rb.position + move);
+                rb.MovePosition(rb.position + move); // Rigidbody kullanarak hareket ettir
             }
 
-            // Animasyonları tetikle
+            // Animasyonları tetikle (Speed parametresini animator'a gönder)
             animator.SetFloat("Speed", move.magnitude);
         }
     }
@@ -75,7 +87,7 @@ public class PlayerMovement : MonoBehaviour
     // Zıplama işlemi
     void HandleJump()
     {
-        if (isGrounded && Input.GetKeyDown(KeyCode.Space))  // Boşluk tuşuna basıldığında zıpla
+        if (isPlayerGrounded && Input.GetKeyDown(KeyCode.Space))  // Boşluk tuşuna basıldığında zıpla
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         }
@@ -94,7 +106,7 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    // Eğilme işlemi
+    // Eğilme işlemi Coroutine
     IEnumerator CrouchStand()
     {
         isCrouching = true;
@@ -103,12 +115,12 @@ public class PlayerMovement : MonoBehaviour
         while (timeElapsed < crouchSpeed)
         {
             timeElapsed += Time.deltaTime;
-            transform.localScale = new Vector3(1f, Mathf.Lerp(1f, crouchHeight, timeElapsed / crouchSpeed), 1f);
+            transform.localScale = new Vector3(1f, Mathf.Lerp(standHeight, crouchHeight, timeElapsed / crouchSpeed), 1f);
             yield return null;
         }
     }
 
-    // Ayakta durma işlemi
+    // Ayakta durma işlemi Coroutine
     IEnumerator StandUp()
     {
         isCrouching = false;
@@ -125,11 +137,11 @@ public class PlayerMovement : MonoBehaviour
     // Yere temas edip etmediğini kontrol et
     private void OnCollisionStay(Collision collision)
     {
-        isGrounded = true;
+        isPlayerGrounded = true;
     }
 
     private void OnCollisionExit(Collision collision)
     {
-        isGrounded = false;
+        isPlayerGrounded = false;
     }
 }
