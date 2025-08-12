@@ -2,23 +2,33 @@ using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
-    public float walkSpeed = 3f;   // Yürüyüş hızı
-    public float runSpeed = 6f;    // Koşma hızı
-    public float jumpForce = 5f;   // Zıplama kuvveti
-    public float rotationSpeed = 10f; // Karakterin dönme hızı
+    public float walkSpeed = 3f;  // Yürüyüş hızı
+    public float runSpeed = 6f;   // Koşma hızı
+    public float crouchSpeed = 3f; // Eğilme hızı
+    public float crouchSlideSpeed = 8f;  // Sürüklenme hızı
+    public float jumpForce = 5f;  // Zıplama kuvveti
+    public float crouchHeight = 0.5f;  // Eğilme yüksekliği
+    public float standHeight = 2f;     // Ayakta durma yüksekliği
+    public float speedDecayFactor = 0.5f;  // Hız azalması oranı
+
     private float currentSpeed;    // Aktif hız
     private bool isGrounded;       // Karakterin yere temas edip etmediğini kontrol et
-    private Rigidbody rb;          // Rigidbody referansı (fiziksel hareket için)
+    private bool isCrouching = false;  // Eğilme durumu
+    private bool isSliding = false;    // Sürüklenme durumu
+    private Rigidbody rb;          // Rigidbody referansı
+    private Animator animator;     // Animator referansı
 
     private void Start()
     {
-        rb = GetComponent<Rigidbody>();  // Rigidbody'yi alıyoruz
+        rb = GetComponent<Rigidbody>();
+        animator = GetComponent<Animator>();
     }
 
     private void Update()
     {
         HandleMovement();
         HandleJump();
+        HandleCrouch();
     }
 
     // Karakterin hareketini işleyen fonksiyon
@@ -39,12 +49,24 @@ public class PlayerMovement : MonoBehaviour
         {
             // Yönü hesapla
             float targetAngle = Mathf.Atan2(moveDirection.x, moveDirection.z) * Mathf.Rad2Deg;
-            float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref currentSpeed, rotationSpeed * Time.deltaTime);
+            float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref currentSpeed, 0.1f);
             transform.rotation = Quaternion.Euler(0f, angle, 0f);
 
             // Karakteri hareket ettir
             Vector3 move = transform.forward * currentSpeed * Time.deltaTime;
-            rb.MovePosition(rb.position + move);
+
+            // Eğilme durumunda daha hızlı hareket et
+            if (isCrouching && isSliding)
+            {
+                transform.Translate(Vector3.forward * crouchSlideSpeed * Time.deltaTime);
+            }
+            else
+            {
+                rb.MovePosition(rb.position + move);
+            }
+
+            // Animasyonları tetikle
+            animator.SetFloat("Speed", move.magnitude);
         }
     }
 
@@ -54,6 +76,47 @@ public class PlayerMovement : MonoBehaviour
         if (isGrounded && Input.GetKeyDown(KeyCode.Space))  // Boşluk tuşuna basıldığında zıpla
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        }
+    }
+
+    // Eğilme işlemi
+    void HandleCrouch()
+    {
+        if (Input.GetKeyDown(KeyCode.LeftControl) && !isCrouching)
+        {
+            StartCoroutine(CrouchStand());
+        }
+        else if (Input.GetKeyDown(KeyCode.LeftControl) && isCrouching)
+        {
+            StartCoroutine(StandUp());
+        }
+    }
+
+    // Eğilme işlemi
+    IEnumerator CrouchStand()
+    {
+        isCrouching = true;
+        isSliding = true;
+        float timeElapsed = 0f;
+        while (timeElapsed < crouchSpeed)
+        {
+            timeElapsed += Time.deltaTime;
+            transform.localScale = new Vector3(1f, Mathf.Lerp(1f, crouchHeight, timeElapsed / crouchSpeed), 1f);
+            yield return null;
+        }
+    }
+
+    // Ayakta durma işlemi
+    IEnumerator StandUp()
+    {
+        isCrouching = false;
+        isSliding = false;
+        float timeElapsed = 0f;
+        while (timeElapsed < crouchSpeed)
+        {
+            timeElapsed += Time.deltaTime;
+            transform.localScale = new Vector3(1f, Mathf.Lerp(crouchHeight, standHeight, timeElapsed / crouchSpeed), 1f);
+            yield return null;
         }
     }
 
