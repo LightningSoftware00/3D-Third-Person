@@ -1,0 +1,70 @@
+using UnityEngine;
+
+public class PlayerMovement : MonoBehaviour
+{
+    public float walkSpeed = 3f;   // Yürüyüş hızı
+    public float runSpeed = 6f;    // Koşma hızı
+    public float jumpForce = 5f;   // Zıplama kuvveti
+    public float rotationSpeed = 10f; // Karakterin dönme hızı
+    private float currentSpeed;    // Aktif hız
+    private bool isGrounded;       // Karakterin yere temas edip etmediğini kontrol et
+    private Rigidbody rb;          // Rigidbody referansı (fiziksel hareket için)
+
+    private void Start()
+    {
+        rb = GetComponent<Rigidbody>();  // Rigidbody'yi alıyoruz
+    }
+
+    private void Update()
+    {
+        HandleMovement();
+        HandleJump();
+    }
+
+    // Karakterin hareketini işleyen fonksiyon
+    void HandleMovement()
+    {
+        // Yatay ve dikey inputlar
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
+
+        // Hareket yönünü belirle
+        Vector3 moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
+
+        // Yürüme ve koşma arasında geçiş yap
+        currentSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
+
+        // Eğer hareket varsa, hareketi uygula
+        if (moveDirection.magnitude >= 0.1f)
+        {
+            // Yönü hesapla
+            float targetAngle = Mathf.Atan2(moveDirection.x, moveDirection.z) * Mathf.Rad2Deg;
+            float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref currentSpeed, rotationSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.Euler(0f, angle, 0f);
+
+            // Karakteri hareket ettir
+            Vector3 move = transform.forward * currentSpeed * Time.deltaTime;
+            rb.MovePosition(rb.position + move);
+        }
+    }
+
+    // Zıplama işlemi
+    void HandleJump()
+    {
+        if (isGrounded && Input.GetKeyDown(KeyCode.Space))  // Boşluk tuşuna basıldığında zıpla
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        }
+    }
+
+    // Yere temas edip etmediğini kontrol et
+    private void OnCollisionStay(Collision collision)
+    {
+        isGrounded = true;
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        isGrounded = false;
+    }
+}
