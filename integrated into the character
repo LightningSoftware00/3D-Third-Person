@@ -3,6 +3,7 @@ Hierarchy > Right Click > 3D object > capsule
 rename this capsule to Character 
 Hierarchy > Right Click > Create Empty
 rename it to CameraRig
+set position x = 0 , y = 6 , z = 0;
 Put Main Camera inside CameraRig
 select main camera and set position like that (example : X = 0 Y = 1.7 Z = -3 )
 create a new folder inside assets (Scripts) and create a script into Scripts Project > Right Click > Create > MonoBehaviour Script 
