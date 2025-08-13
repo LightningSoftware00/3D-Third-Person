@@ -12,5 +12,5 @@ click to new metarial project > metarial > Detected > Surface Inputs > change co
 click to new metarial project > metarial > Normal > Surface Inputs > change color to green
 Hierarchy > Enemy capsulue > Inspector > enemy vision script > drag normal metarial to here  
 Hierarchy > Enemy capsulue > Inspector > enemy vision script > drag detected metarial to here  
-Hierarchy > Enemy capsulue > Inspector > enemy vision script > Obstacle Mask > Ground(place)
+Hierarchy > Enemy capsulue > Inspector > enemy vision script > Obstacle Mask > Ground(place) , any obstacle
 Hierarchy > Enemy capsulue > Inspector > enemy vision script > Player > character 
