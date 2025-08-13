@@ -1,0 +1,50 @@
+using UnityEngine;
+
+public class EnemyVision : MonoBehaviour
+{
+    public Transform player;         // Oyuncu referansı
+    public float viewDistance = 10f; // Görüş mesafesi
+    public float viewAngle = 90f;    // Görüş açısı
+
+    public Material normalMaterial;  // Normal durumda materyal
+    public Material alertMaterial;   // Oyuncuyu gördüğünde materyal
+
+    private Renderer rend;
+
+    void Start()
+    {
+        rend = GetComponent<Renderer>();
+        rend.material = normalMaterial;
+    }
+
+    void Update()
+    {
+        // Oyuncu ile aradaki mesafe
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+
+        if (distanceToPlayer <= viewDistance)
+        {
+            // Oyuncunun düşmana göre yönü
+            Vector3 dirToPlayer = (player.position - transform.position).normalized;
+            float angle = Vector3.Angle(transform.forward, dirToPlayer);
+
+            if (angle <= viewAngle / 2f)
+            {
+                // Arada engel var mı kontrol et
+                if (Physics.Raycast(transform.position + Vector3.up, dirToPlayer, out RaycastHit hit, viewDistance))
+                {
+                    if (hit.transform == player)
+                    {
+                        // Oyuncu görüldü
+                        rend.material = alertMaterial;
+                        Debug.Log("Düşman oyuncuyu gördü!");
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Oyuncu görünmüyorsa normal hale dön
+        rend.material = normalMaterial;
+    }
+}
