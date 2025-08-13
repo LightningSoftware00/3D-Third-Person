@@ -1,19 +1,36 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
 public class ThirdPersonMovement : MonoBehaviour
 {
-    public float moveSpeed = 5f;
-    public float rotationSpeed = 10f;
-    public Transform cameraTransform;
+    [Header("Hız Ayarları")]
+    public float walkSpeed = 3f;       // Normal yürüme hızı
+    public float runSpeed = 6f;        // Koşma hızı
+    public float crouchSpeed = 1.5f;   // Eğilme hızı
+    public float jumpForce = 5f;       // Zıplama kuvveti
+
+    [Header("Referanslar")]
+    public Transform cameraTransform;  // Kameranın yönü
 
     private Rigidbody rb;
+    private bool isGrounded = true;
+    private bool isCrouching = false;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        rb.freezeRotation = true; // Fizikten dönmeyi kapat
     }
 
     void Update()
+    {
+        CheckGround(); // Yere temas kontrolü
+        Move();
+        Jump();
+        Crouch();
+    }
+
+    void Move()
     {
         float horizontal = Input.GetAxis("Horizontal");
         float vertical = Input.GetAxis("Vertical");
@@ -22,11 +39,48 @@ public class ThirdPersonMovement : MonoBehaviour
         moveDirection.y = 0f;
         moveDirection.Normalize();
 
+        float currentSpeed = walkSpeed;
+
+        if (Input.GetKey(KeyCode.LeftShift) && !isCrouching) // Koşma
+            currentSpeed = runSpeed;
+        else if (isCrouching) // Eğilme
+            currentSpeed = crouchSpeed;
+
         if (moveDirection.magnitude >= 0.1f)
         {
             Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-            rb.MovePosition(rb.position + moveDirection * moveSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10f * Time.deltaTime);
+
+            Vector3 move = moveDirection * currentSpeed * Time.deltaTime;
+            rb.MovePosition(rb.position + move);
         }
+    }
+
+    void Jump()
+    {
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        {
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        }
+    }
+
+    void Crouch()
+    {
+        if (Input.GetKeyDown(KeyCode.LeftControl))
+        {
+            isCrouching = true;
+            transform.localScale = new Vector3(1f, 0.5f, 1f); // Boyu kısalt
+        }
+        else if (Input.GetKeyUp(KeyCode.LeftControl))
+        {
+            isCrouching = false;
+            transform.localScale = new Vector3(1f, 1f, 1f); // Boyu eski haline getir
+        }
+    }
+
+    void CheckGround()
+    {
+        // Karakterin altına kısa bir ray gönder
+        isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f);
     }
 }
