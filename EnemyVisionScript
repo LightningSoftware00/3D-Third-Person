@@ -2,49 +2,56 @@ using UnityEngine;
 
 public class EnemyVision : MonoBehaviour
 {
-    public Transform player;         // Oyuncu referansı
-    public float viewDistance = 10f; // Görüş mesafesi
-    public float viewAngle = 90f;    // Görüş açısı
+    public Transform player;
+    public float viewDistance = 8f;
+    public float crouchViewDistance = 4f;
+    public float viewAngle = 60f;
+    public LayerMask obstacleMask;
 
-    public Material normalMaterial;  // Normal durumda materyal
-    public Material alertMaterial;   // Oyuncuyu gördüğünde materyal
+    public Material normalMaterial;
+    public Material alertMaterial;
 
     private Renderer rend;
+    private ThirdPersonMovement playerMovement;
 
     void Start()
     {
         rend = GetComponent<Renderer>();
-        rend.material = normalMaterial;
+        if (player != null)
+            playerMovement = player.GetComponent<ThirdPersonMovement>();
     }
 
     void Update()
     {
-        // Oyuncu ile aradaki mesafe
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        if (player == null || playerMovement == null) return;
 
-        if (distanceToPlayer <= viewDistance)
+        float currentViewDistance = playerMovement.isCrouching ? crouchViewDistance : viewDistance;
+
+        Vector3 toPlayer = (player.position - transform.position).normalized;
+        float dist = Vector3.Distance(transform.position, player.position);
+
+        if (Vector3.Angle(transform.forward, toPlayer) < viewAngle / 2f)
         {
-            // Oyuncunun düşmana göre yönü
-            Vector3 dirToPlayer = (player.position - transform.position).normalized;
-            float angle = Vector3.Angle(transform.forward, dirToPlayer);
-
-            if (angle <= viewAngle / 2f)
+            bool blocked = Physics.Raycast(transform.position + Vector3.up * 0.5f, toPlayer, dist, obstacleMask);
+            if (!blocked && dist <= currentViewDistance)
             {
-                // Arada engel var mı kontrol et
-                if (Physics.Raycast(transform.position + Vector3.up, dirToPlayer, out RaycastHit hit, viewDistance))
-                {
-                    if (hit.transform == player)
-                    {
-                        // Oyuncu görüldü
-                        rend.material = alertMaterial;
-                        Debug.Log("Düşman oyuncuyu gördü!");
-                        return;
-                    }
-                }
+                rend.material = alertMaterial; // görüyor
+                return;
             }
         }
 
-        // Oyuncu görünmüyorsa normal hale dön
-        rend.material = normalMaterial;
+        rend.material = normalMaterial; // görmüyor
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, viewDistance);
+
+        Vector3 L = Quaternion.Euler(0, -viewAngle / 2f, 0) * transform.forward;
+        Vector3 R = Quaternion.Euler(0, viewAngle / 2f, 0) * transform.forward;
+        Gizmos.color = Color.red;
+        Gizmos.DrawLine(transform.position, transform.position + L * viewDistance);
+        Gizmos.DrawLine(transform.position, transform.position + R * viewDistance);
     }
 }
