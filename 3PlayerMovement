@@ -4,27 +4,30 @@ using UnityEngine;
 public class ThirdPersonMovement : MonoBehaviour
 {
     [Header("Hız Ayarları")]
-    public float walkSpeed = 3f;       // Normal yürüme hızı
-    public float runSpeed = 6f;        // Koşma hızı
-    public float crouchSpeed = 1.5f;   // Eğilme hızı
-    public float jumpForce = 5f;       // Zıplama kuvveti
+    public float walkSpeed = 3f;
+    public float runSpeed = 6f;
+    public float crouchSpeed = 1.5f;
+    public float jumpForce = 5f;
 
     [Header("Referanslar")]
-    public Transform cameraTransform;  // Kameranın yönü
+    public Transform cameraTransform;
+
+    [HideInInspector] public bool isCrouching; // EnemyVision burayı okuyacak
 
     private Rigidbody rb;
-    private bool isGrounded = true;
-    private bool isCrouching = false;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        rb.freezeRotation = true; // Fizikten dönmeyi kapat
+        rb.freezeRotation = true;
+
+        if (cameraTransform == null && Camera.main != null)
+            cameraTransform = Camera.main.transform;
     }
 
     void Update()
     {
-        CheckGround(); // Yere temas kontrolü
+        CheckGround();
         Move();
         Jump();
         Crouch();
@@ -32,28 +35,30 @@ public class ThirdPersonMovement : MonoBehaviour
 
     void Move()
     {
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
+        float h = Input.GetAxis("Horizontal");
+        float v = Input.GetAxis("Vertical");
 
-        Vector3 moveDirection = (cameraTransform.forward * vertical + cameraTransform.right * horizontal);
-        moveDirection.y = 0f;
-        moveDirection.Normalize();
+        Vector3 moveDir = (cameraTransform.forward * v + cameraTransform.right * h);
+        moveDir.y = 0f;
+        moveDir.Normalize();
 
-        float currentSpeed = walkSpeed;
+        float currentSpeed = isCrouching ? crouchSpeed : (Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed);
 
-        if (Input.GetKey(KeyCode.LeftShift) && !isCrouching) // Koşma
-            currentSpeed = runSpeed;
-        else if (isCrouching) // Eğilme
-            currentSpeed = crouchSpeed;
-
-        if (moveDirection.magnitude >= 0.1f)
+        if (moveDir.sqrMagnitude > 0.0001f)
         {
-            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10f * Time.deltaTime);
+            Quaternion targetRot = Quaternion.LookRotation(moveDir);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, 10f * Time.deltaTime);
 
-            Vector3 move = moveDirection * currentSpeed * Time.deltaTime;
+            Vector3 move = moveDir * currentSpeed * Time.deltaTime;
             rb.MovePosition(rb.position + move);
         }
+    }
+
+    bool isGrounded;
+    void CheckGround()
+    {
+        // Kapsül yüksekliği ~2 ise 1.1 iyidir; gerekirse arttır/azalt
+        isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f);
     }
 
     void Jump()
@@ -69,18 +74,12 @@ public class ThirdPersonMovement : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.LeftControl))
         {
             isCrouching = true;
-            transform.localScale = new Vector3(1f, 0.5f, 1f); // Boyu kısalt
+            transform.localScale = new Vector3(1f, 0.5f, 1f);
         }
         else if (Input.GetKeyUp(KeyCode.LeftControl))
         {
             isCrouching = false;
-            transform.localScale = new Vector3(1f, 1f, 1f); // Boyu eski haline getir
+            transform.localScale = new Vector3(1f, 1f, 1f);
         }
-    }
-
-    void CheckGround()
-    {
-        // Karakterin altına kısa bir ray gönder
-        isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f);
     }
 }
